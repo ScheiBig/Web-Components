@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web-Components tests</title>
+    <title>Knob Web-Component</title>
     <script type="module" defer src="./knob.js"></script>
 
     <style>
@@ -79,7 +79,8 @@
     <div class="example">
         <pre>
             <code>
-Analog potentiometer multi-turn</code>
+Analog potentiometer multi-turn
+            </code>
         </pre>
         <x-knob from="45" value="0" min="0" max="60" lap="40"
             onrotate='e => document.getElementById("anl-mlt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
@@ -92,15 +93,31 @@ Analog potentiometer multi-turn</code>
     </div>
     <div class="example">
         <pre>
-                <code>
-Analog potentiometer single-turn</code>
-            </pre>
+            <code>
+Analog potentiometer single-turn
+            </code>
+        </pre>
         <x-knob from="90" to="360" value="50" min="50" max="200"
             onrotate='e => document.getElementById("anl-snt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
         <pre>
             <code>
 
 <span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"90"</span> <span class="attr">to</span>=<span class="str">"360"</span> <span class="attr">value</span>=<span id="anl-snt" class="str">"50.00"</span> <span class="attr">min</span>=<span class="str">"50"</span> <span class="attr">max</span>=<span class="str">"200"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+    <div class="example">
+        <pre>
+                <code>
+Analog encoder
+                </code>
+        </pre>
+        <x-knob from="180" to="270" value="10" min="5" max="25" infinite
+            onrotate='e => document.getElementById("anl-enc").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"180"</span> <span class="attr">to</span>=<span class="str">"360"</span> <span class="attr">value</span>=<span id="anl-enc" class="str">"5.00"</span> <span class="attr">min</span>=<span class="str">"5"</span> <span class="attr">max</span>=<span class="str">"25"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
             </code>
         </pre>
     </div>

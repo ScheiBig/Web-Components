@@ -211,7 +211,7 @@ export default class ComponentKnob extends HTMLElement {
 
     get lap() {
         let value = this.max - this.min
-        if (this.to != null) {
+        if (this.to != null && !this.infinite) {
             // We are in single-turn mode - lap is ignored so we map it to angle range
             /** @type {number} */ let angle
             switch (true) {
@@ -306,7 +306,9 @@ export default class ComponentKnob extends HTMLElement {
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
         this.render = this.render.bind(this)
-        this.valueChangedHandler = this.valueChangedHandler.bind(this)
+        this.valueChangedHandler = this.syncValueAngle.bind(this)
+
+        this.syncValueAngle()
     }
 
     connectedCallback() {
@@ -368,7 +370,7 @@ export default class ComponentKnob extends HTMLElement {
         }
 
         if (name === "value" && !this.#isRotating) {
-            this.#value = this.value
+            this.syncValueAngle()
         }
     }
 
@@ -465,8 +467,7 @@ export default class ComponentKnob extends HTMLElement {
 
 
         this.value = this.#value
-        const rotAngle = (this.value - this.min) / this.lap * 360
-        this.#knob.style.setProperty("--angle", rotAngle + "deg")
+        this.syncValueAngle()
         this.#prevAngle = angle
 
 
@@ -488,8 +489,16 @@ export default class ComponentKnob extends HTMLElement {
 
     render() { }
 
-    valueChangedHandler() {
-
+    syncValueAngle() {
+        if (this.infinite && this.value > this.max) {
+            this.value = this.value % this.lap
+        }
+        if (this.infinite && this.value < this.min) {
+            this.value = this.value % this.lap + this.lap
+        }
+        this.#value = this.value
+        const rotAngle = (this.value - this.min) / this.lap * 360
+        this.#knob.style.setProperty("--angle", rotAngle + "deg")
     }
 
     static get KnobValueChangeEvent() {
