@@ -17,8 +17,13 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             padding: 16px;
-            margin: 0;
-            column-gap: 16px;
+            gap: 16px;
+        }
+        
+        @media (max-width: 1280px) {
+            body {
+                grid-template-columns: repeat(1, 1fr);
+            }
         }
 
         x-knob {
@@ -37,10 +42,21 @@
             &>:nth-child(1) {
                 padding: 16px 24px;
                 margin: 0;
+
+                background: linear-gradient(90deg,
+                        var(--type) 0%,
+                        var(--type) 45%,
+                        var(--mode) 55%,
+                        var(--mode) 100%);
+
+                width: 100%;
+                text-align: center;
+                box-sizing: border-box;
+                border-radius: 3px 3px 0 0;
             }
 
             &>x-knob {
-                margin: 48px 0 96px;
+                margin: 48px 0 48px;
             }
 
             &>:nth-child(3) {
@@ -70,15 +86,45 @@
                 & .str {
                     color: #0b939e;
                     font-weight: bold;
+
                 }
             }
+
+            --color-offset: -10;
+
+            &.anl {
+                --type: hsl(calc(300 + var(--color-offset)), 100%, 95%);
+            }
+
+            &.dig {
+                --type: hsl(calc(0 + var(--color-offset)), 100%, 95%);
+            }
+
+            &.dis {
+                --type: hsl(calc(60 + var(--color-offset)), 100%, 95%);
+            }
+
+            &.mlt {
+                --mode: hsl(calc(120 + var(--color-offset)), 100%, 95%);
+            }
+
+            &.snt {
+                --mode: hsl(calc(180 + var(--color-offset)), 100%, 95%);
+            }
+
+            &.enc {
+                --mode: hsl(calc(240 + var(--color-offset)), 100%, 95%);
+            }
+
+        }
     </style>
 </head>
 
 <body>
-    <div class="example">
+    <div class="example anl mlt">
         <pre>
             <code>
+
 Analog potentiometer multi-turn
             </code>
         </pre>
@@ -91,9 +137,10 @@ Analog potentiometer multi-turn
             </code>
         </pre>
     </div>
-    <div class="example">
+    <div class="example anl snt">
         <pre>
             <code>
+
 Analog potentiometer single-turn
             </code>
         </pre>
@@ -106,18 +153,119 @@ Analog potentiometer single-turn
             </code>
         </pre>
     </div>
-    <div class="example">
+    <div class="example anl enc">
         <pre>
-                <code>
+            <code>
+
 Analog encoder
-                </code>
+            </code>
         </pre>
-        <x-knob from="180" to="270" value="10" min="5" max="25" infinite
+        <x-knob from="180" value="5" min="-5" max="15" infinite
             onrotate='e => document.getElementById("anl-enc").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
         <pre>
             <code>
 
-<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"180"</span> <span class="attr">to</span>=<span class="str">"360"</span> <span class="attr">value</span>=<span id="anl-enc" class="str">"5.00"</span> <span class="attr">min</span>=<span class="str">"5"</span> <span class="attr">max</span>=<span class="str">"25"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"180"</span> <span class="attr">value</span>=<span id="anl-enc" class="str">"5.00"</span> <span class="attr">min</span>=<span class="str">"-5"</span> <span class="attr">max</span>=<span class="str">"15"</span> <span class="attr">infinite</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+
+    
+    <div class="example dis mlt">
+        <pre>
+            <code>
+
+Discrete potentiometer multi-turn
+            </code>
+        </pre>
+        <x-knob from="45" value="0" min="0" max="60" lap="40" positions="0, 15, 30, 45, 60"
+            onrotate='e => document.getElementById("dis-mlt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"45"</span> <span class="attr">value</span>=<span id="dis-mlt" class="str">"0.00"</span> <span class="attr">min</span>=<span class="str">"0"</span> <span class="attr">max</span>=<span class="str">"60"</span> <span class="attr">lap</span>=<span class="str">"40"</span>
+<span class="attr">positions</span>=<span class="str">"0, 15, 30, 45, 60"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+    <div class="example dis snt">
+        <pre>
+            <code>
+
+Discrete potentiometer single-turn
+            </code>
+        </pre>
+        <x-knob from="90" to="360" value="50" min="50" max="200" positions="50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200"
+            onrotate='e => document.getElementById("dis-snt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"90"</span> <span class="attr">to</span>=<span class="str">"360"</span> <span class="attr">value</span>=<span id="dis-snt" class="str">"50.00"</span> <span class="attr">min</span>=<span class="str">"50"</span> <span class="attr">max</span>=<span class="str">"200"</span>
+<span class="attr">positions</span>=<span class="str">"50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+    <div class="example dis enc">
+        <pre>
+            <code>
+
+Discrete encoder
+            </code>
+        </pre>
+        <x-knob from="15" value="0" min="-4" max="4" infinite positions="-4, -3, -2,-1, 0, 1, 2, 3"
+            onrotate='e => document.getElementById("dis-enc").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"15"</span> <span class="attr">value</span>=<span id="dis-enc" class="str">"0.00"</span> <span class="attr">min</span>=<span class="str">"-4"</span> <span class="attr">max</span>=<span class="str">"4"</span> <span class="attr">infinite</span>
+<span class="attr">positions</span>=<span class="str">"-4, -3, -2, -1, 0, 1, 2, 3"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+
+    
+    <div class="example dig mlt">
+        <pre>
+            <code>
+
+Digital potentiometer multi-turn
+            </code>
+        </pre>
+        <x-knob from="45" value="0" min="0" max="60" lap="40" positions="0, 15, 30, 45, 60" sticky
+            onrotate='e => document.getElementById("dig-mlt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"45"</span> <span class="attr">value</span>=<span id="dig-mlt" class="str">"0.00"</span> <span class="attr">min</span>=<span class="str">"0"</span> <span class="attr">max</span>=<span class="str">"60"</span> <span class="attr">lap</span>=<span class="str">"40"</span> <span class="attr">sticky</span>
+<span class="attr">positions</span>=<span class="str">"0, 15, 30, 45, 60"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+    <div class="example dig snt">
+        <pre>
+            <code>
+
+Digital potentiometer single-turn
+            </code>
+        </pre>
+        <x-knob from="90" to="360" value="50" min="50" max="200" sticky positions="50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200"
+            onrotate='e => document.getElementById("dig-snt").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"90"</span> <span class="attr">to</span>=<span class="str">"360"</span> <span class="attr">value</span>=<span id="dig-snt" class="str">"50.00"</span> <span class="attr">min</span>=<span class="str">"50"</span> <span class="attr">max</span>=<span class="str">"200"</span> <span class="attr">sticky</span>
+<span class="attr">positions</span>=<span class="str">"50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
+            </code>
+        </pre>
+    </div>
+    <div class="example dig enc">
+        <pre>
+            <code>
+
+Digital encoder
+            </code>
+        </pre>
+        <x-knob from="15" value="0" min="-4" max="4" infinite sticky positions="-4, -3, -2,-1, 0, 1, 2, 3"
+            onrotate='e => document.getElementById("dig-enc").innerText = "\"" + e.value.toFixed(2) + "\""'></x-knob>
+        <pre>
+            <code>
+<span class="tag">&lt;</span><span class="name">x-knob</span> <span class="attr">from</span>=<span class="str">"15"</span> <span class="attr">value</span>=<span id="dig-enc" class="str">"0.00"</span> <span class="attr">min</span>=<span class="str">"-4"</span> <span class="attr">max</span>=<span class="str">"4"</span> <span class="attr">infinite</span> <span class="attr">sticky</span>
+<span class="attr">positions</span>=<span class="str">"-4, -3, -2, -1, 0, 1, 2, 3"</span><span class="tag">&gt;</span><span class="tag">&lt;/</span><span class="name">x-knob</span><span class="tag">&gt;</span>
             </code>
         </pre>
     </div>

@@ -21,13 +21,17 @@ template.innerHTML = html`
         --angle: 0deg;
         height: 100%;
         width: 100%;
+        border-radius: 50%;
         transform: rotate(calc(var(--angle) + var( --root)));
         will-change: transform;
     }
 
-    :host([sticky=""]) #knob,
-    :host([sticky="true"]) #knob {
-        transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    #knob.rotating {
+        background: #0001;
+    }
+
+    :host([positions]:not([sticky])) #knob.rotating {
+        transition: transform 0.25s cubic-bezier(0.45, 0.9, 0.9, 1.05);
     }
 
     #marker {
@@ -296,9 +300,7 @@ export default class ComponentKnob extends HTMLElement {
 
         this.#body = this.shadowRoot.getElementById("body")
         this.#knob = this.shadowRoot.getElementById("knob")
-        this.#value = this.value
-        this.#knob.style.setProperty("--root", this.from + "deg")
-
+        
         this.rotateBegin = this.rotateBegin.bind(this)
         this.rotateChange = this.rotateChange.bind(this)
         this.rotateEnd = this.rotateEnd.bind(this)
@@ -306,12 +308,15 @@ export default class ComponentKnob extends HTMLElement {
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
         this.render = this.render.bind(this)
-        this.valueChangedHandler = this.syncValueAngle.bind(this)
-
-        this.syncValueAngle()
+        this.syncValueAngle = this.syncValueAngle.bind(this)
+        
     }
-
+    
     connectedCallback() {
+        this.#value = this.value
+        this.#knob.style.setProperty("--root", this.from + "deg")
+        this.syncValueAngle()
+        
         this.render()
 
         this.addEventListener("mousedown", this.mouseDownHandler)
@@ -334,7 +339,11 @@ export default class ComponentKnob extends HTMLElement {
             let uniqueValues = values.filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b)
 
             if (values.length !== uniqueValues.length) {
-                throw new Error(`position [${value}] does not contain unique values`)
+                throw new Error(`positions [${value}] do not contain unique values`)
+            }
+
+            if (values.length < 2) {
+                throw new Error(`positions [${value}] cannot contain less than two values`)
             }
 
             let arrEq = values.map((v, i) => v === uniqueValues[ i ])
@@ -370,6 +379,7 @@ export default class ComponentKnob extends HTMLElement {
         }
 
         if (name === "value" && !this.#isRotating) {
+            this.#value = this.value
             this.syncValueAngle()
         }
     }
@@ -398,7 +408,7 @@ export default class ComponentKnob extends HTMLElement {
             x: e.clientX,
             y: e.clientY
         }
-        this.rotateChange(false)
+        this.rotateChange()
     }
     /**
      * @param {MouseEvent} e 
@@ -417,25 +427,23 @@ export default class ComponentKnob extends HTMLElement {
 
         const loc = this.#location
         const cur = this.#cursor
-        this.#prevAngle = (Math.atan2(
+        this.#prevAngle = mod(Math.atan2(
             loc.y - cur.y,
             loc.x - cur.x,
-        ) + (3 / 4 * PI2)) % PI2 * 360 / PI2
+        ) + (3 / 4 * PI2), PI2) * 360 / PI2
 
         this.#isRotating = true
+        this.#knob.classList.add("rotating")
     }
 
-    /**
-     * @param {boolean} fromAttribute 
-     */
-    rotateChange(fromAttribute) {
+    rotateChange() {
         const loc = this.#location
         const cur = this.#cursor
         // atan2, but with 0 on top and clock-wise
-        let angle = (Math.atan2(
+        let angle = mod(Math.atan2(
             loc.y - cur.y,
             loc.x - cur.x,
-        ) + (3 / 4 * PI2)) % PI2 * 360 / PI2
+        ) + (3 / 4 * PI2), PI2) * 360 / PI2
 
         let prevAngle = this.#prevAngle
 
@@ -461,12 +469,32 @@ export default class ComponentKnob extends HTMLElement {
             this.#value = winsorize(this.min, this.#value, this.max)
         }
 
-
-
-
-
-
-        this.value = this.#value
+        if (!this.positions) {
+            // Analog device - sync value immediately
+            this.value = this.#value
+            if (this.infinite) {
+                this.value = mod(this.value - this.min, this.lap) + this.min
+            }
+        } else {
+            // Non-analog device - move value to nearest position
+            if (this.infinite) {
+                this.value = mod(this.#value - this.min, this.lap) + this.min
+            } else {
+                this.value = winsorize(this.min, this.#value, this.max)
+            }
+            const pos = this.positions.slice()
+            if (this.infinite) {
+                pos.unshift(this.lap - this.positions.at(-1))
+                pos.push(this.lap + this.positions.at(0))
+            }
+            const nearestPosition = pos
+                .map(v => [ Math.abs(v - this.value), v ])
+                .sort((a, b) => a[ 0 ] - b[ 0 ])[0]
+            
+            this.value = nearestPosition[ 1 ]
+            console.log(nearestPosition)
+        }
+        
         this.syncValueAngle()
         this.#prevAngle = angle
 
@@ -485,20 +513,37 @@ export default class ComponentKnob extends HTMLElement {
     rotateEnd() {
         window.oncontextmenu = this.#windowContextMenuHandler
         this.#isRotating = false
+        this.#knob.classList.remove("rotating")
     }
 
     render() { }
 
     syncValueAngle() {
-        if (this.infinite && this.value > this.max) {
-            this.value = this.value % this.lap
+        if (!this.positions) {
+            // Analog type
+            const rotAngle = (this.value - this.min) / this.lap * 360
+            this.#knob.style.setProperty("--angle", rotAngle + "deg")
+        } else {
+            // Non-analog type - base angle off #value, sync will perform after dropping knob
+            console.log("-----", this.value, this.#value.toFixed(3))
+            let val = this.#value
+            if (!this.sticky) {
+                if (this.infinite) {
+                    // const overflow = this.#value - this.#value % this.lap
+                    const offset = mod(this.#value - this.min, this.lap) + this.min
+                    const overflow = this.#value - offset
+                    val = overflow + this.value
+                } else {
+                    val = this.value
+                }
+            }
+
+            const rotAngle = (val - this.min) / this.lap * 360
+            this.#knob.style.setProperty("--angle", rotAngle + "deg")
+
+
+            console.log(rotAngle.toFixed(2) + "deg", val.toFixed(2)+"int", this.value, this.#value.toFixed(3))
         }
-        if (this.infinite && this.value < this.min) {
-            this.value = this.value % this.lap + this.lap
-        }
-        this.#value = this.value
-        const rotAngle = (this.value - this.min) / this.lap * 360
-        this.#knob.style.setProperty("--angle", rotAngle + "deg")
     }
 
     static get KnobValueChangeEvent() {
@@ -536,4 +581,13 @@ function winsorize(min, val, max) {
         ),
         max
     )
+}
+
+/**
+ * @param {number} n 
+ * @param {number} d 
+ * @returns {number}
+ */
+function mod(n, d) {
+    return ((n % d) + d) % d
 }
