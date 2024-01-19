@@ -31,7 +31,11 @@ template.innerHTML = html`
     }
 
     :host([positions]:not([sticky])) #knob.rotating {
-        transition: transform 0.25s cubic-bezier(0.45, 0.9, 0.9, 1.05);
+        transition: transform 0.25s cubic-bezier(0.45, 0.9, 0.9, 1.20);
+    }
+
+    :host([positions])  #knob.syncing {
+        transition: transform 0.25s cubic-bezier(0.45, 0.9, 0.9, 1.20);
     }
 
     #marker {
@@ -300,28 +304,36 @@ export default class ComponentKnob extends HTMLElement {
 
         this.#body = this.shadowRoot.getElementById("body")
         this.#knob = this.shadowRoot.getElementById("knob")
-        
+
         this.rotateBegin = this.rotateBegin.bind(this)
         this.rotateChange = this.rotateChange.bind(this)
         this.rotateEnd = this.rotateEnd.bind(this)
         this.mouseDownHandler = this.mouseDownHandler.bind(this)
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
-        this.render = this.render.bind(this)
         this.syncValueAngle = this.syncValueAngle.bind(this)
-        
+
     }
-    
+
+
+    /**
+     * Lifecycle hook for handling installation of component
+     * 
+     * Syncs initial value and installs events
+     */
     connectedCallback() {
         this.#value = this.value
         this.#knob.style.setProperty("--root", this.from + "deg")
         this.syncValueAngle()
-        
-        this.render()
 
         this.addEventListener("mousedown", this.mouseDownHandler)
     }
 
+    /**
+     * Lifecycle hook for handling removal of component
+     * 
+     * Removes events
+     */
     disconnectedCallback() {
         this.removeEventListener("mousedown", this.mouseDownHandler)
     }
@@ -385,6 +397,7 @@ export default class ComponentKnob extends HTMLElement {
     }
 
     /**
+     * Event handler for beginning Left-Click on knob
      * @param {MouseEvent} e 
      */
     mouseDownHandler(e) {
@@ -399,6 +412,7 @@ export default class ComponentKnob extends HTMLElement {
         document.addEventListener("mouseup", this.mouseUpHandler)
     }
     /**
+     * Event handler for moving cursor while holding knob
      * @param {MouseEvent} e 
      */
     mouseMoveHandler(e) {
@@ -411,6 +425,7 @@ export default class ComponentKnob extends HTMLElement {
         this.rotateChange()
     }
     /**
+     * Event handler for letting go of knob
      * @param {MouseEvent} e 
      */
     mouseUpHandler(e) {
@@ -421,10 +436,16 @@ export default class ComponentKnob extends HTMLElement {
         this.rotateEnd()
     }
 
+    /**
+     * Sets up rotation of knob
+     */
     rotateBegin() {
+        // Remove contextmenu handler to safe location - menu can interfere with rotation handling,
+        //   so install handler that ignores such request
         this.#windowContextMenuHandler = window.oncontextmenu
         window.oncontextmenu = () => false
 
+        // Set initial angle of line drawn between cursor and middle of knob, to "north"
         const loc = this.#location
         const cur = this.#cursor
         this.#prevAngle = mod(Math.atan2(
@@ -432,14 +453,20 @@ export default class ComponentKnob extends HTMLElement {
             loc.x - cur.x,
         ) + (3 / 4 * PI2), PI2) * 360 / PI2
 
+        // Indicate rotation (sets up animations and disables handling value change in lifecycle
+        //   hook - otherwise infinite recursion is inevitable)
         this.#isRotating = true
         this.#knob.classList.add("rotating")
     }
 
+    /**
+     * Handles rotation of knob
+     */
     rotateChange() {
+        // Get current angle - this and previous angle acquisition gets angle as clockwise with
+        //   value 0 on "north"
         const loc = this.#location
         const cur = this.#cursor
-        // atan2, but with 0 on top and clock-wise
         let angle = mod(Math.atan2(
             loc.y - cur.y,
             loc.x - cur.x,
@@ -447,6 +474,8 @@ export default class ComponentKnob extends HTMLElement {
 
         let prevAngle = this.#prevAngle
 
+        // Calculate change in angle with relation to previous tick
+        //   From that calculate change in value
         /** @type {number} */ let deltaValue
         if (prevAngle > 270 && angle < 90) {
             // Wrap clock-wise - next angle treat as over 360
@@ -461,62 +490,114 @@ export default class ComponentKnob extends HTMLElement {
             let deltaAngle = angle - prevAngle
             deltaValue = deltaAngle / 360 * this.lap
         }
-
         this.#value += deltaValue
 
-        // Not encoder - bound value to min..max
+        // Potentiometers are not allowed to move internal value out of bounds
         if (!this.infinite) {
             this.#value = winsorize(this.min, this.#value, this.max)
+            if (this.positions) {
+                // Non analog - sync external value, will move to position later
+                this.value = this.#value
+            }
         }
 
         if (!this.positions) {
-            // Analog device - sync value immediately
+            // Analog device - sync internal value immediately
             this.value = this.#value
             if (this.infinite) {
+                // Encoder - move value to within bounds
                 this.value = mod(this.value - this.min, this.lap) + this.min
             }
         } else {
             // Non-analog device - move value to nearest position
-            if (this.infinite) {
-                this.value = mod(this.#value - this.min, this.lap) + this.min
-            } else {
-                this.value = winsorize(this.min, this.#value, this.max)
-            }
+
             const pos = this.positions.slice()
             if (this.infinite) {
+                // Encoder - move set value to within bounds
+                this.value = mod(this.#value - this.min, this.lap) + this.min
+                // Add dummy positions for outside of bounds - they represent additional positions
+                //   on same angles as first and last position, but on next / previous rotation
                 pos.unshift(this.lap - this.positions.at(-1))
                 pos.push(this.lap + this.positions.at(0))
             }
+            // Find nearest position and move external value to it
             const nearestPosition = pos
                 .map(v => [ Math.abs(v - this.value), v ])
-                .sort((a, b) => a[ 0 ] - b[ 0 ])[0]
-            
-            this.value = nearestPosition[ 1 ]
-            console.log(nearestPosition)
+                .sort((a, b) => a[ 0 ] - b[ 0 ])[ 0 ][ 1 ]
+            this.value = nearestPosition
         }
-        
+
+        // Issue synchronization of visual rotation with value and cache current angle for next tick
         this.syncValueAngle()
         this.#prevAngle = angle
 
-
+        // Create and dispatch event
+        // TODO -> don't dispatch, if discrete (and maybe digital) knob didn't change position
         const e = new ComponentKnob.KnobValueChangeEvent(this.value)
-
         if (this.onrotate !== null && this.onrotate !== false) {
             let f = eval(this.onrotate)
             if (typeof f === "function") { f(e) }
         }
-
         this.dispatchEvent(e)
     }
 
-
-    rotateEnd() {
+    /**
+     * Finalizes rotation of knob
+     */
+    async rotateEnd() {
+        // Restore contextmenu listener
         window.oncontextmenu = this.#windowContextMenuHandler
+        // Signal that rotation isn't taking place anymore
         this.#isRotating = false
         this.#knob.classList.remove("rotating")
+
+        // Non-analog devices might need angle and value correction
+        if (this.positions) {
+
+            // Sticky knobs have to move to position after letting go of knob
+            if (this.sticky) {
+
+                // Install async event listener, that waits for end of rotation transition
+                const transitionFinished = new Promise(res => {
+                    /** @type {function(TransitionEvent): void} */
+                    const handler = e => {
+                        if (e.target !== this.#knob || e.propertyName !== "transform") { return }
+                        this.#knob.removeEventListener("transitionend", handler)
+                        this.#knob.classList.remove("syncing")
+                        res()
+                    }
+                    this.#knob.addEventListener("transitionend", handler)
+                })
+                // Add class that transitions angle rotation
+                this.#knob.classList.add("syncing")
+
+                // Calculate and set angle to nearest position
+                let val = this.#value
+                if (this.infinite) {
+                    const offset = mod(this.#value - this.min, this.lap) + this.min
+                    const overflow = this.#value - offset
+                    val = overflow + this.value
+                } else {
+                    val = this.value
+                }
+                const rotAngle = (val - this.min) / this.lap * 360
+                this.#knob.style.setProperty("--angle", rotAngle + "deg")
+
+                // Wait for end of transition before proceeding
+                await transitionFinished
+            }
+
+            // Encoders need to return into bound values
+            if (this.infinite) {
+                let angle = parseFloat(this.#knob.style.getPropertyValue("--angle").slice(0, -3))
+                this.#knob.style.setProperty("--angle", mod(angle, 360) + "deg")
+                // External value will be already proper one - sync internal
+                this.#value = this.value
+            }
+        }
     }
 
-    render() { }
+
 
     syncValueAngle() {
         if (!this.positions) {
@@ -542,7 +623,7 @@ export default class ComponentKnob extends HTMLElement {
             this.#knob.style.setProperty("--angle", rotAngle + "deg")
 
 
-            console.log(rotAngle.toFixed(2) + "deg", val.toFixed(2)+"int", this.value, this.#value.toFixed(3))
+            console.log(rotAngle.toFixed(2) + "deg", val.toFixed(2) + "int", this.value, this.#value.toFixed(3))
         }
     }
 
