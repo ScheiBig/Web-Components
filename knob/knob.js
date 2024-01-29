@@ -614,10 +614,31 @@ export default class ComponentKnob extends HTMLElement {
                     const offset = mod(this.#value - this.min, this.lap) + this.min
                     const overflow = this.#value - offset
                     val = overflow + this.value
-                    // Math fix
+                    // Math fixes
+                    let w = MathX.mod(this.#value - this.min, this.lap) + this.min
                     if (this.value == this.min
-                        && this.#value != this.min) {
+                        && w > (this.min)
+                        && w < (this.lap / 4 + this.min)
+                    ) {
                         val += this.lap
+                    }
+                    if (this.value == this.min
+                        && w < (this.lap + this.min)
+                        && w > (this.lap * 3 / 4 + this.min)
+                    ) {
+                        val += this.lap
+                    }
+                    if (this.value == this.min
+                        && w > (this.min)
+                        && w < (this.lap / 4 + this.min)
+                    ) {
+                        val -= this.lap
+                    }
+                    if (this.value == this.min
+                        && w > (this.lap + this.min)
+                        && w < (this.lap * 5 / 4 + this.min)
+                    ) {
+                        val -= this.lap
                     }
                 } else {
                     val = this.value
