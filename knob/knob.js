@@ -614,6 +614,11 @@ export default class ComponentKnob extends HTMLElement {
                     const offset = mod(this.#value - this.min, this.lap) + this.min
                     const overflow = this.#value - offset
                     val = overflow + this.value
+                    // Math fix
+                    if (this.value == this.min
+                        && this.#value != this.min) {
+                        val += this.lap
+                    }
                 } else {
                     val = this.value
                 }
@@ -630,7 +635,7 @@ export default class ComponentKnob extends HTMLElement {
     static get KnobValueChangeEvent() {
         return class extends Event {
 
-            /** @type{number} */ value
+            /** @type {number} */ value
 
             /**
              * @param {number} value 
